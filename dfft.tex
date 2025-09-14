@@ -20,7 +20,10 @@ X[k] = \sum_{n=0}^{N-1} x[n] \; e^{-j 2\pi k n / N}, \quad k=0,1,\dots,N-1.
 \end{equation}
 This direct computation is $\mathcal{O}(N^2)$: $N$ outputs, each summing $N$ complex multiplications.
 
-In many applications we only need the magnitude spectrum $|X[k]| = \sqrt{\operatorname{Re}\{X[k]\}^2 + \operatorname{Im}\{X[k]\}^2}$.
+In many applications we only need the magnitude spectrum, defined as
+\begin{equation}
+  \left|X[k]\right| = \sqrt{\operatorname{Re}\{X[k]\}^2 + \operatorname{Im}\{X[k]\}^2}.
+\end{equation}
 
 \section{Even/Odd Decomposition (Why FFT Works)}
 Assume $N$ is even. Split the input into its even and odd-indexed subsequences:
@@ -118,6 +121,52 @@ for msize in [2, 4, 8, ..., N] {
 // 4) Magnitude
 for k in 0..N { out[k] = sqrt(re[k]^2 + im[k]^2); }
 \end{verbatim}
+
+\section{Worked Examples}
+
+\subsection{Slow DFT by Hand (N=4)}
+Let $N=4$ and define $W_4 = e^{-j 2\pi/4} = e^{-j\pi/2} = -j$. Its powers are
+\begin{equation}
+W_4^0 = 1,\quad W_4^1 = -j,\quad W_4^2 = -1,\quad W_4^3 = j.
+\end{equation}
+Choose a simple signal $x=[1,\,0,\,-1,\,0]$. Then
+\begin{align}
+X[0] &= x_0 W_4^{0\cdot 0} + x_1 W_4^{0\cdot 1} + x_2 W_4^{0\cdot 2} + x_3 W_4^{0\cdot 3}
+     = 1 + 0 + (-1) + 0 = 0,\\
+X[1] &= 1\cdot W_4^{0} + 0\cdot W_4^{1} + (-1)\cdot W_4^{2} + 0\cdot W_4^{3}
+     = 1 + 0 + (+1) + 0 = 2,\\
+X[2] &= 1\cdot W_4^{0} + 0\cdot W_4^{2} + (-1)\cdot W_4^{4} + 0\cdot W_4^{6}
+     = 1 + 0 + (-1) + 0 = 0,\\
+X[3] &= 1\cdot W_4^{0} + 0\cdot W_4^{3} + (-1)\cdot W_4^{6} + 0\cdot W_4^{9}
+     = 1 + 0 + (+1) + 0 = 2.
+\end{align}
+Thus the magnitude spectrum is $|X| = [0,\,2,\,0,\,2]$ (unnormalized). This matches the intuition: $x$ is a cosine at bin $k=1$ (and its conjugate at $k=3$).
+
+\subsection{Fast Radix-2 FFT by Stages (N=8)}
+Let $N=8$ and consider $x=[1,\,0,\,-1,\,0,\,1,\,0,\,-1,\,0]$, i.e.
+$x[n] = \cos\!\big(2\pi \cdot 2\, n/8\big)$. We know in advance that the DFT has peaks at $k=2$ and $k=6$ with magnitude $N/2 = 4$ (unnormalized). We now walk through the radix-2 DIT FFT.
+
+\paragraph{Bit-Reversal Permutation.}
+With $m=\log_2 8 = 3$ bits, reversing the bits of index $i$ gives
+\begin{equation}
+0\to0,\;1\to4,\;2\to2,\;3\to6,\;4\to1,\;5\to5,\;6\to3,\;7\to7.
+\end{equation}
+Reordering $x$ accordingly (imaginary parts initially zero) yields the in-place array $a$ ready for butterflies.
+
+\paragraph{Stage $m=2$.}
+Block size $m=2$; there is only $j=0$ with twiddle $w=1$. Each butterfly just adds/subtracts adjacent pairs. After this stage, pairs $(x[0],x[1])$, $(x[2],x[3])$, etc. are combined; values remain real.
+
+\paragraph{Stage $m=4$.}
+Now $w_m = e^{-j 2\pi/4} = -j$. For each block of length 4, $j=0$ uses $w=1$ (real add/sub), and $j=1$ uses $w=-j$, introducing purely imaginary contributions that form the $k=1$ and $k=3$ partials within each 4-point subtransform.
+
+\paragraph{Stage $m=8$.}
+Finally, $w_m = e^{-j 2\pi/8} = e^{-j\pi/4} = \tfrac{1}{\sqrt{2}}(1 - j)$. This mixes the two 4-point results to produce the full 8-point spectrum. Evaluating the butterflies yields (up to tiny roundoff)
+\begin{equation}
+|X| \approx [0,\,0,\,4,\,0,\,0,\,0,\,4,\,0],
+\end{equation}
+with peaks at $k=2$ and $k=6$, as predicted from $x[n]=\cos(2\pi\cdot 2\,n/8)$.
+
+These stages illustrate how the FFT builds larger DFTs out of smaller ones: stage $m=2$ forms 2-point DFTs, stage $m=4$ combines them into 4-point DFTs, and stage $m=8$ completes the 8-point DFT.
 
 \section{Validation}
 \begin{itemize}

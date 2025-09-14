@@ -6,3 +6,5 @@ edition = "2021"
 
 [dependencies]
 cpal = { version = "0.15" }
+ctrlc = "3.5.0"
+rustfft = { version = "6.4.0", features = ["wasm_simd"] }
