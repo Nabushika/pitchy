@@ -1,0 +1,9 @@
+[package]
+name = "line-in-tuner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cpal = { version = "0.15" }
+ctrlc = "3.5.0"
+tuner-core = { path = "../tuner-core" }
