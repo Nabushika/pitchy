@@ -1,0 +1,7 @@
+[package]
+name = "tuner-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rustfft = { version = "6.4.0", features = ["wasm_simd"] }
